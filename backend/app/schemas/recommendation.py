@@ -15,6 +15,9 @@ class RecommendationRead(BaseModel):
     creator: str | None = None
     year: int | None = None
     link: str | None = None
+    preview_url: str | None = None
+    album_art: str | None = None
+    external_url: str | None = None
 
 
 class FeedbackRequest(BaseModel):

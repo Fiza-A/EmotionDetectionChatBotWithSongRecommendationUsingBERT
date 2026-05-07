@@ -10,9 +10,13 @@ export default function RecommendationCard({ item, emotion, onFeedback }) {
   return (
     <article className="soft-panel rounded-2xl p-4 transition hover:-translate-y-0.5 hover:shadow-lg">
       <div className="mb-3 flex items-center justify-between gap-2">
-        <span className="grid h-10 w-10 place-items-center rounded-xl bg-teal-50 text-teal-700">
-          <Icon size={20} />
-        </span>
+        {item.album_art ? (
+          <img src={item.album_art} alt="" className="h-12 w-12 rounded-xl object-cover shadow-sm" />
+        ) : (
+          <span className="grid h-10 w-10 place-items-center rounded-xl bg-teal-50 text-teal-700">
+            <Icon size={20} />
+          </span>
+        )}
         <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold uppercase tracking-wide text-slate-600">{item.language}</span>
       </div>
       <h3 className="line-clamp-2 text-base font-extrabold text-slate-950">{item.title}</h3>
@@ -23,9 +27,12 @@ export default function RecommendationCard({ item, emotion, onFeedback }) {
         ))}
       </div>
       <div className="mt-4 flex items-center gap-2">
-        {item.link && (
-          <a className="mr-auto rounded-xl bg-slate-950 px-3 py-2 text-sm font-semibold text-white hover:bg-slate-800" href={item.link} target="_blank" rel="noreferrer">
-            Search
+        {item.preview_url && (
+          <audio controls src={item.preview_url} className="h-9 min-w-0 flex-1" />
+        )}
+        {(item.external_url || item.link) && (
+          <a className={`${item.preview_url ? "" : "mr-auto"} rounded-xl bg-slate-950 px-3 py-2 text-sm font-semibold text-white hover:bg-slate-800`} href={item.external_url || item.link} target="_blank" rel="noreferrer">
+            Open
           </a>
         )}
         <button aria-label="Like recommendation" onClick={() => sendFeedback("like")} className="rounded-xl bg-emerald-50 p-2 text-emerald-700 hover:bg-emerald-100">

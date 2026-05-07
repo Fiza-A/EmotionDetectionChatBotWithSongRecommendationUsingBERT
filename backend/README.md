@@ -32,6 +32,17 @@ python -m app.ml.train --dataset-path path\to\goemotions.csv --output-dir model_
 
 The trainer uses max length `128`, learning rate `2e-5`, macro F1 as the best-model metric, and reports accuracy, F1, precision, and recall. The backend loads saved artifacts from `MODEL_DIR` (`model_artifacts/electra-goemotions` by default). If the model is absent, it uses a documented rule-based fallback with a negation guard.
 
+## iTunes Song Preview Enrichment
+
+Songs can be enriched with free iTunes Search API metadata: 30-second preview URL, album art, and Apple Music link.
+
+```bash
+python -m app.seed.seed_recommendations --itunes
+python scripts/check_itunes_songs.py
+```
+
+The checker writes `itunes_song_check.json` in the backend folder and reports which seeded songs were found with previews.
+
 ## Evaluate
 
 ```bash

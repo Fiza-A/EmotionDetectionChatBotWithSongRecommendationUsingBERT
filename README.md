@@ -49,6 +49,16 @@ python -m app.ml.train --dataset-path path\to\goemotions.csv
 
 Saved artifacts go to `backend/model_artifacts/electra-goemotions` from the repository view (`model_artifacts/electra-goemotions` while inside `backend`) and are loaded automatically by the API.
 
+## iTunes Previews
+
+The backend can enrich song recommendations with free iTunes Search API results, including 30-second `previewUrl`, `artworkUrl100`, and Apple Music links:
+
+```bash
+cd backend
+python -m app.seed.seed_recommendations --itunes
+python scripts/check_itunes_songs.py
+```
+
 ## Notes
 
 The chatbot is not a therapist or medical diagnostic tool. It includes a basic self-harm keyword safety response and encourages immediate trusted or emergency support when triggered.

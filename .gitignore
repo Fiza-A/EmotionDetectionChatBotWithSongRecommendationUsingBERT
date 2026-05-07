@@ -16,6 +16,8 @@ env/
 *.log
 backend/backend.out.log
 backend/backend.err.log
+backend/backend/
+backend/itunes_song_check.json
 backend/model_artifacts/
 
 # Frontend

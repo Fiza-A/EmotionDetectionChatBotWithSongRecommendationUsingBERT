@@ -74,6 +74,9 @@ class Recommendation(Base):
     creator: Mapped[str | None] = mapped_column(String(255), nullable=True)
     year: Mapped[int | None] = mapped_column(Integer, nullable=True)
     link: Mapped[str | None] = mapped_column(Text, nullable=True)
+    preview_url: Mapped[str | None] = mapped_column(Text, nullable=True)
+    album_art: Mapped[str | None] = mapped_column(Text, nullable=True)
+    external_url: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     events: Mapped[list["RecommendationEvent"]] = relationship(back_populates="recommendation")
     __table_args__ = (UniqueConstraint("title", "type", "language", name="uq_recommendation_item"),)

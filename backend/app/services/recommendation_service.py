@@ -35,6 +35,9 @@ def recommendation_to_read(item: Recommendation) -> dict:
         "creator": item.creator,
         "year": item.year,
         "link": item.link,
+        "preview_url": item.preview_url,
+        "album_art": item.album_art,
+        "external_url": item.external_url,
     }
 
 
