@@ -59,6 +59,21 @@ python -m app.seed.seed_recommendations --itunes
 python scripts/check_itunes_songs.py
 ```
 
+## Expanding Recommendations
+
+The backend includes import commands for CSV/TSV files and optional APIs. Local data belongs in `backend/data/`; missing files or missing API keys print clear messages instead of crashing.
+
+```bash
+cd backend
+python -m app.seed.import_movies --source csv --file backend/data/movies.csv
+python -m app.seed.import_songs --source csv --file backend/data/songs.csv
+python -m app.seed.import_movies --source imdb
+python -m app.seed.import_movies --source tmdb --language Hindi --limit 500
+python -m app.seed.import_songs --source musicbrainz --language Hindi --limit 500
+python -m app.seed.enrich_music_tags
+python -m app.seed.enrich_movie_tags
+```
+
 ## Notes
 
 The chatbot is not a therapist or medical diagnostic tool. It includes a basic self-harm keyword safety response and encourages immediate trusted or emergency support when triggered.

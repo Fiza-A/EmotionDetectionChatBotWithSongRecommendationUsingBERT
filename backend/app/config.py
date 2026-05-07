@@ -1,7 +1,7 @@
 from functools import lru_cache
 from pathlib import Path
 
-from pydantic import ConfigDict, Field
+from pydantic import ConfigDict, Field, model_validator
 from pydantic_settings import BaseSettings
 
 
@@ -17,6 +17,10 @@ class Settings(BaseSettings):
     cors_origins: str = "http://localhost:5173,http://127.0.0.1:5173"
     model_dir: str = "model_artifacts/electra-goemotions"
     fallback_inference: bool = True
+    tmdb_api_key: str = ""
+    lastfm_api_key: str = ""
+    spotify_client_id: str = ""
+    spotify_client_secret: str = ""
 
     @property
     def cors_origin_list(self) -> list[str]:
@@ -26,6 +30,12 @@ class Settings(BaseSettings):
     def resolved_model_dir(self) -> Path:
         return Path(self.model_dir)
 
+    @model_validator(mode="after")
+    def reject_default_secret_outside_safe_environments(self):
+        safe_environments = {"development", "dev", "test", "testing"}
+        if self.environment.lower() not in safe_environments and self.secret_key == "change-me-in-production":
+            raise ValueError("SECRET_KEY must be changed outside development/test environments.")
+        return self
 
 
 @lru_cache

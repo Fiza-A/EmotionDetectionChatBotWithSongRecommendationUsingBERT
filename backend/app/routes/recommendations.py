@@ -16,8 +16,8 @@ def recommendations(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    items = get_recommendations_for_user(db, current_user, emotion)
-    return [recommendation_to_read(item) for item in items]
+    result = get_recommendations_for_user(db, current_user, emotion)
+    return [recommendation_to_read(item) for item in result.items]
 
 
 @router.post("/feedback", response_model=RecommendationEventRead)

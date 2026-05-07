@@ -22,6 +22,7 @@ class User(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
     preferences: Mapped["UserPreference"] = relationship(back_populates="user", cascade="all, delete-orphan", uselist=False)
+    conversations: Mapped[list["Conversation"]] = relationship(back_populates="user", cascade="all, delete-orphan")
     messages: Mapped[list["ChatMessage"]] = relationship(back_populates="user", cascade="all, delete-orphan")
     mood_history: Mapped[list["MoodHistory"]] = relationship(back_populates="user", cascade="all, delete-orphan")
     recommendation_events: Mapped[list["RecommendationEvent"]] = relationship(back_populates="user", cascade="all, delete-orphan")
@@ -36,18 +37,35 @@ class UserPreference(Base):
     user: Mapped[User] = relationship(back_populates="preferences")
 
 
+class Conversation(Base):
+    __tablename__ = "conversations"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), index=True)
+    title: Mapped[str] = mapped_column(String(160), default="New Conversation")
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, index=True)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, index=True)
+
+    user: Mapped[User] = relationship(back_populates="conversations")
+    messages: Mapped[list["ChatMessage"]] = relationship(back_populates="conversation", cascade="all, delete-orphan")
+    recommendation_events: Mapped[list["RecommendationEvent"]] = relationship(back_populates="conversation", cascade="all, delete-orphan")
+
+
 class ChatMessage(Base):
     __tablename__ = "chat_messages"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), index=True)
+    conversation_id: Mapped[int | None] = mapped_column(ForeignKey("conversations.id"), index=True, nullable=True)
     sender: Mapped[str] = mapped_column(String(20), nullable=False)
     message_text: Mapped[str] = mapped_column(Text, nullable=False)
     detected_emotion: Mapped[str | None] = mapped_column(String(80), nullable=True)
     confidence_score: Mapped[float | None] = mapped_column(Float, nullable=True)
+    recommendations_json: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, index=True)
 
     user: Mapped[User] = relationship(back_populates="messages")
+    conversation: Mapped[Conversation | None] = relationship(back_populates="messages")
 
 
 class MoodHistory(Base):
@@ -55,6 +73,7 @@ class MoodHistory(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), index=True)
+    conversation_id: Mapped[int | None] = mapped_column(ForeignKey("conversations.id"), index=True, nullable=True)
     emotion: Mapped[str] = mapped_column(String(80), nullable=False)
     confidence_score: Mapped[float] = mapped_column(Float, nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, index=True)
@@ -74,9 +93,15 @@ class Recommendation(Base):
     creator: Mapped[str | None] = mapped_column(String(255), nullable=True)
     year: Mapped[int | None] = mapped_column(Integer, nullable=True)
     link: Mapped[str | None] = mapped_column(Text, nullable=True)
+    image_url: Mapped[str | None] = mapped_column(Text, nullable=True)
     preview_url: Mapped[str | None] = mapped_column(Text, nullable=True)
     album_art: Mapped[str | None] = mapped_column(Text, nullable=True)
     external_url: Mapped[str | None] = mapped_column(Text, nullable=True)
+    source: Mapped[str | None] = mapped_column(String(80), nullable=True)
+    source_id: Mapped[str | None] = mapped_column(String(120), nullable=True)
+    popularity_score: Mapped[float] = mapped_column(Float, default=0.0)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
     events: Mapped[list["RecommendationEvent"]] = relationship(back_populates="recommendation")
     __table_args__ = (UniqueConstraint("title", "type", "language", name="uq_recommendation_item"),)
@@ -87,10 +112,12 @@ class RecommendationEvent(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), index=True)
+    conversation_id: Mapped[int | None] = mapped_column(ForeignKey("conversations.id"), index=True, nullable=True)
     recommendation_id: Mapped[int] = mapped_column(ForeignKey("recommendations.id"), index=True)
     detected_emotion: Mapped[str] = mapped_column(String(80), index=True)
     feedback: Mapped[str | None] = mapped_column(String(20), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, index=True)
 
     user: Mapped[User] = relationship(back_populates="recommendation_events")
+    conversation: Mapped[Conversation | None] = relationship(back_populates="recommendation_events")
     recommendation: Mapped[Recommendation] = relationship(back_populates="events")

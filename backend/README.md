@@ -43,6 +43,33 @@ python scripts/check_itunes_songs.py
 
 The checker writes `itunes_song_check.json` in the backend folder and reports which seeded songs were found with previews.
 
+## Recommendation Catalog Imports
+
+The backend ships with a larger built-in seed catalog and can import external CSV/TSV/API data without breaking when files or API keys are missing.
+
+Expected optional local files live in `backend/data/`:
+
+- `movies.csv`
+- `songs.csv`
+- `imdb_title_basics.tsv`
+- `imdb_title_ratings.tsv`
+- `tmdb_movies.csv`
+- `indian_regional_movies.csv`
+
+Commands:
+
+```bash
+python -m app.seed.import_movies --source csv --file backend/data/movies.csv
+python -m app.seed.import_songs --source csv --file backend/data/songs.csv
+python -m app.seed.import_movies --source imdb
+python -m app.seed.import_movies --source tmdb --language Hindi --limit 500
+python -m app.seed.import_songs --source musicbrainz --language Hindi --limit 500
+python -m app.seed.enrich_music_tags
+python -m app.seed.enrich_movie_tags
+```
+
+API-backed imports only run when the corresponding keys are configured in `.env`.
+
 ## Evaluate
 
 ```bash

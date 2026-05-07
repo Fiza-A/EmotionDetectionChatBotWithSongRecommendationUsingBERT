@@ -10,8 +10,8 @@ export default function RecommendationCard({ item, emotion, onFeedback }) {
   return (
     <article className="soft-panel rounded-2xl p-4 transition hover:-translate-y-0.5 hover:shadow-lg">
       <div className="mb-3 flex items-center justify-between gap-2">
-        {item.album_art ? (
-          <img src={item.album_art} alt="" className="h-12 w-12 rounded-xl object-cover shadow-sm" />
+        {item.image_url || item.album_art ? (
+          <img src={item.image_url || item.album_art} alt="" className="h-12 w-12 rounded-xl object-cover shadow-sm" />
         ) : (
           <span className="grid h-10 w-10 place-items-center rounded-xl bg-teal-50 text-teal-700">
             <Icon size={20} />

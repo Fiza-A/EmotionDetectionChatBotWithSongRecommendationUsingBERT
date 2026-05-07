@@ -15,9 +15,19 @@ class RecommendationRead(BaseModel):
     creator: str | None = None
     year: int | None = None
     link: str | None = None
+    image_url: str | None = None
     preview_url: str | None = None
     album_art: str | None = None
     external_url: str | None = None
+    source: str | None = None
+    source_id: str | None = None
+    popularity_score: float = 0.0
+
+
+class RecommendationBundle(BaseModel):
+    songs: list[RecommendationRead] = Field(default_factory=list)
+    movies: list[RecommendationRead] = Field(default_factory=list)
+    message: str | None = None
 
 
 class FeedbackRequest(BaseModel):

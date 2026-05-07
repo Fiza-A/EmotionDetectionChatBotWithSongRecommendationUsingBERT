@@ -23,9 +23,17 @@ export const userApi = {
 };
 
 export const chatApi = {
-  send: (message) => api.post("/chat/message", { message }),
+  send: (message, conversation_id) => api.post("/chat/message", { message_text: message, conversation_id }),
   history: () => api.get("/chat/history"),
   moodHistory: () => api.get("/mood/history")
+};
+
+export const conversationApi = {
+  create: (title) => api.post("/conversations", title ? { title } : {}),
+  list: () => api.get("/conversations"),
+  detail: (conversationId) => api.get(`/conversations/${conversationId}`),
+  rename: (conversationId, title) => api.patch(`/conversations/${conversationId}`, { title }),
+  delete: (conversationId) => api.delete(`/conversations/${conversationId}`)
 };
 
 export const recommendationApi = {

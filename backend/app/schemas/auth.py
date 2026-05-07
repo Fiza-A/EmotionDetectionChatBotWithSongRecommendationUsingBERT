@@ -1,6 +1,7 @@
 from pydantic import BaseModel, EmailStr, Field, field_validator
 
 from app.schemas.user import UserRead
+from app.services.languages import normalize_languages
 
 
 class RegisterRequest(BaseModel):
@@ -12,9 +13,10 @@ class RegisterRequest(BaseModel):
     @field_validator("preferred_languages")
     @classmethod
     def languages_required(cls, value: list[str]) -> list[str]:
-        if not value:
-            raise ValueError("Select at least one preferred language.")
-        return value
+        normalized = normalize_languages(value)
+        if not normalized:
+            raise ValueError("Select at least one supported preferred language.")
+        return normalized
 
 
 class LoginRequest(BaseModel):

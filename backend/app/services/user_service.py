@@ -5,16 +5,17 @@ from sqlalchemy.orm import Session
 from app.auth.security import hash_password, verify_password
 from app.models.models import User, UserPreference
 from app.schemas.auth import LoginRequest, RegisterRequest
+from app.services.languages import normalize_languages
 
 
 def serialize_languages(languages: list[str]) -> str:
-    return ",".join(dict.fromkeys([language.strip() for language in languages if language.strip()]))
+    return ",".join(normalize_languages(languages))
 
 
 def parse_languages(value: str | None) -> list[str]:
     if not value:
-        return ["English"]
-    return [language.strip() for language in value.split(",") if language.strip()]
+        return []
+    return normalize_languages([language.strip() for language in value.split(",") if language.strip()])
 
 
 def create_user(db: Session, payload: RegisterRequest) -> User:
@@ -38,8 +39,11 @@ def authenticate_user(db: Session, payload: LoginRequest) -> User:
 
 
 def update_preferences(db: Session, user: User, languages: list[str]) -> UserPreference:
+    normalized = normalize_languages(languages)
+    if not normalized:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Select at least one supported language.")
     prefs = user.preferences or UserPreference(user_id=user.id)
-    prefs.preferred_languages = serialize_languages(languages)
+    prefs.preferred_languages = serialize_languages(normalized)
     db.add(prefs)
     db.commit()
     db.refresh(prefs)

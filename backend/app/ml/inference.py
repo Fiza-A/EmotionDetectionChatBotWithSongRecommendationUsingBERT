@@ -57,8 +57,8 @@ class EmotionClassifier:
         encoded = self.tokenizer(text, truncation=True, padding=True, max_length=128, return_tensors="pt").to(self.device)
         with self.torch.no_grad():
             logits = self.model(**encoded).logits[0]
-            probabilities = torch.softmax(logits, dim=-1).detach().cpu()
-        idx = int(torch.argmax(probabilities))
+            probabilities = self.torch.softmax(logits, dim=-1).detach().cpu()
+        idx = int(self.torch.argmax(probabilities))
         raw_label = GOEMOTIONS_LABELS[idx] if idx < len(GOEMOTIONS_LABELS) else self.model.config.id2label.get(idx, "neutral")
         mood = map_goemotion_to_mood(raw_label)
         scores = {GOEMOTIONS_LABELS[i]: float(probabilities[i]) for i in range(min(len(GOEMOTIONS_LABELS), len(probabilities)))}
