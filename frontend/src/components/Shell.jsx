@@ -1,8 +1,9 @@
-import { Bot, ChartNoAxesColumn, LogOut, MessageCircle, Pencil, Plus, Settings, Trash2 } from "lucide-react";
+import { ChartNoAxesColumn, LogOut, MessageCircle, Pencil, Plus, Settings, Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
 import { useAuth } from "../hooks/useAuth";
 import { conversationApi } from "../services/api";
+import logo from "../assets/Logo.png";
 
 const nav = [
   { to: "/", label: "Chat", icon: MessageCircle },
@@ -75,8 +76,8 @@ export default function Shell() {
       <div className="mx-auto flex h-full min-h-0 max-w-7xl flex-col overflow-hidden rounded-[28px] border border-white/80 bg-white/55 shadow-glow backdrop-blur-xl lg:flex-row">
         <aside className="flex shrink-0 flex-col gap-5 overflow-hidden border-b border-slate-200/80 p-4 lg:h-full lg:w-72 lg:border-b-0 lg:border-r">
           <div className="flex items-center gap-3 px-2">
-            <div className="grid h-12 w-12 place-items-center rounded-2xl bg-slate-950 text-white">
-              <Bot size={25} />
+            <div className="flex h-12 w-12 items-center justify-center overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+              <img src={logo} alt="MoodMate logo" className="h-full w-full object-cover" />
             </div>
             <div>
               <h1 className="text-lg font-extrabold tracking-tight">MoodMate</h1>
