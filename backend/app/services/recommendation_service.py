@@ -5,6 +5,7 @@ from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from app.models.models import Recommendation, RecommendationEvent, User
+from app.services.itunes_service import itunes_fields_for
 from app.services.user_service import parse_languages
 
 NEGATIVE_MOODS = {"sad", "angry", "anxious", "disappointed", "lonely"}
@@ -80,7 +81,13 @@ def _has_target_tag(item: Recommendation, target_tags: list[str]) -> bool:
     return bool(set(tag.lower() for tag in _tags(item.mood_tags)).intersection(tag.lower() for tag in target_tags))
 
 
-def get_recommendations_for_user(db: Session, user: User, emotion: str, limit_per_type: int = 3) -> RecommendationResult:
+def get_recommendations_for_user(
+    db: Session,
+    user: User,
+    emotion: str,
+    limit_per_type: int = 3,
+    enrich_itunes: bool = False,
+) -> RecommendationResult:
     preferred_languages = parse_languages(user.preferences.preferred_languages if user.preferences else None)
     if not preferred_languages:
         return RecommendationResult(
@@ -113,16 +120,19 @@ def get_recommendations_for_user(db: Session, user: User, emotion: str, limit_pe
         .all()
     }
 
-    items = (
-        db.query(Recommendation)
-        .filter(func.lower(Recommendation.language).in_(list(preferred_lower)))
-        .all()
-    )
+    def items_for(kind: str) -> list[Recommendation]:
+        return (
+            db.query(Recommendation)
+            .filter(Recommendation.type == kind)
+            .filter(func.lower(Recommendation.language).in_(list(preferred_lower)))
+            .all()
+        )
 
     def score(item: Recommendation) -> float:
         item_tags = set(_tags(item.mood_tags))
+        item_tags_lower = {tag.lower() for tag in item_tags}
         target_lower = {tag.lower() for tag in target_tags}
-        value = len({tag.lower() for tag in item_tags}.intersection(target_lower)) * 10
+        value = len(item_tags_lower.intersection(target_lower)) * 10
         if item.language in preferred_languages:
             value += 8 - preferred_languages.index(item.language)
         if item.id in liked_ids:
@@ -131,16 +141,9 @@ def get_recommendations_for_user(db: Session, user: User, emotion: str, limit_pe
             value -= 25
         value += min(float(item.popularity_score or 0), 100.0) / 20.0
         value += random.random() * 7
-        if emotion in NEGATIVE_MOODS and item_tags.intersection({"sad", "melancholy", "heartbreak"}):
+        if emotion in NEGATIVE_MOODS and item_tags_lower.intersection({"sad", "melancholy", "melancholic", "heartbreak"}):
             value -= 20
         return value
-
-    strict_matches = [item for item in items if _has_target_tag(item, target_tags)]
-
-    # Allowed fallback: broaden within selected languages only, while still avoiding sad tags for negative moods.
-    if not strict_matches and emotion in NEGATIVE_MOODS:
-        broad_tags = ["uplifting", "comforting", "hopeful", "comedy", "calm", "feel-good"]
-        strict_matches = [item for item in items if _has_target_tag(item, broad_tags)]
 
     def valid_for_negative(item: Recommendation) -> bool:
         return not (
@@ -148,13 +151,63 @@ def get_recommendations_for_user(db: Session, user: User, emotion: str, limit_pe
             and set(tag.lower() for tag in _tags(item.mood_tags)).intersection({"sad", "melancholic", "heartbreak", "grief", "tragedy", "dark", "horror", "depressing"})
         )
 
-    def choose(kind: str) -> list[Recommendation]:
-        candidates = [item for item in strict_matches if item.type == kind and valid_for_negative(item) and item.id not in disliked_ids]
+    def valid_matches(kind: str) -> list[Recommendation]:
+        candidates = [item for item in items_for(kind) if valid_for_negative(item)]
+        matches = [item for item in candidates if _has_target_tag(item, target_tags)]
+        if len(matches) >= limit_per_type:
+            return matches
+
+        # Allowed fallback: broaden within selected languages only, per type.
+        broad_tags = ["uplifting", "comforting", "hopeful", "comedy", "calm", "feel-good", "happy", "upbeat", "energetic"]
+        broader = [item for item in candidates if _has_target_tag(item, broad_tags)]
+        merged: list[Recommendation] = []
+        for item in [*matches, *broader]:
+            if item.id not in {existing.id for existing in merged}:
+                merged.append(item)
+        return merged
+
+    def candidate_pool(kind: str) -> list[Recommendation]:
+        candidates = [item for item in valid_matches(kind) if item.id not in disliked_ids]
         fresh = [item for item in candidates if item.id not in recent_id_set]
         pool = fresh if len(fresh) >= limit_per_type else candidates
-        return sorted(pool, key=score, reverse=True)[:limit_per_type]
+        return sorted(pool, key=score, reverse=True)
 
-    songs = choose("song")
+    def choose(kind: str) -> list[Recommendation]:
+        return candidate_pool(kind)[:limit_per_type]
+
+    def apply_itunes_preview(song: Recommendation) -> bool:
+        if song.preview_url:
+            return True
+        fields = itunes_fields_for(song.title, song.creator)
+        preview_url = fields.get("preview_url")
+        if not preview_url:
+            return False
+        song.preview_url = preview_url
+        song.album_art = fields.get("album_art") or song.album_art
+        song.image_url = song.image_url or song.album_art
+        song.external_url = fields.get("external_url") or song.external_url
+        song.link = song.external_url or song.link
+        return True
+
+    def choose_songs() -> list[Recommendation]:
+        if not enrich_itunes:
+            return choose("song")
+        songs_with_previews: list[Recommendation] = []
+        changed = False
+        for song in candidate_pool("song"):
+            had_preview = bool(song.preview_url)
+            if apply_itunes_preview(song):
+                songs_with_previews.append(song)
+                changed = changed or not had_preview
+            if len(songs_with_previews) >= limit_per_type:
+                break
+        if changed:
+            db.commit()
+            for song in songs_with_previews:
+                db.refresh(song)
+        return songs_with_previews
+
+    songs = choose_songs()
     movies = choose("movie")
 
     message = None

@@ -6,6 +6,14 @@ import RecommendationCard from "../components/RecommendationCard";
 import TypingIndicator from "../components/TypingIndicator";
 import { chatApi, conversationApi } from "../services/api";
 
+function recommendationItems(recommendations) {
+  if (Array.isArray(recommendations)) return recommendations;
+  if (recommendations && typeof recommendations === "object") {
+    return [...(recommendations.songs || []), ...(recommendations.movies || [])];
+  }
+  return [];
+}
+
 export default function ChatPage() {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
@@ -77,33 +85,36 @@ export default function ChatPage() {
         {!loadingMessages && messages.length === 0 && (
           <div className="mx-auto mt-16 max-w-xl text-center">
             <h3 className="text-3xl font-extrabold text-slate-950">{activeConversationId ? "This conversation is empty" : "Start a new conversation"}</h3>
-            <p className="mt-3 leading-7 text-slate-500">Try “I am not feeling good today” or “I’m excited for my trip” and the app will store your mood history.</p>
+            <p className="mt-3 leading-7 text-slate-500">Try "I am not feeling good today" or "I'm excited for my trip" and the app will store your mood history.</p>
           </div>
         )}
         <div className="mx-auto flex max-w-4xl flex-col gap-4">
           {loadingMessages && <TypingIndicator />}
           <AnimatePresence>
-            {messages.map((message) => (
-              <motion.div key={message.id} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}>
-                <div className={`flex ${message.sender === "user" ? "justify-end" : "justify-start"}`}>
-                  <div className={`max-w-[82%] rounded-3xl px-5 py-3 shadow-sm ${message.sender === "user" ? "bg-slate-950 text-white" : "bg-white text-slate-700"}`}>
-                    <p className="leading-7">{message.message_text}</p>
+            {messages.map((message) => {
+              const items = recommendationItems(message.recommendations);
+              return (
+                <motion.div key={message.id} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}>
+                  <div className={`flex ${message.sender === "user" ? "justify-end" : "justify-start"}`}>
+                    <div className={`max-w-[82%] rounded-3xl px-5 py-3 shadow-sm ${message.sender === "user" ? "bg-slate-950 text-white" : "bg-white text-slate-700"}`}>
+                      <p className="leading-7">{message.message_text}</p>
+                    </div>
                   </div>
-                </div>
-                {message.recommendations?.length > 0 && (
-                  <div className="mt-3 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-                    {message.recommendations.map((item) => (
-                      <RecommendationCard key={`${message.id}-${item.id}`} item={item} emotion={message.detected_emotion} />
-                    ))}
-                  </div>
-                )}
-                {message.recommendation_message && (
-                  <p className="mt-3 rounded-2xl bg-white px-4 py-3 text-sm font-semibold text-slate-600 shadow-sm">
-                    {message.recommendation_message}
-                  </p>
-                )}
-              </motion.div>
-            ))}
+                  {items.length > 0 && (
+                    <div className="mt-3 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                      {items.map((item) => (
+                        <RecommendationCard key={`${message.id}-${item.id}`} item={item} emotion={message.detected_emotion} />
+                      ))}
+                    </div>
+                  )}
+                  {message.recommendation_message && (
+                    <p className="mt-3 rounded-2xl bg-white px-4 py-3 text-sm font-semibold text-slate-600 shadow-sm">
+                      {message.recommendation_message}
+                    </p>
+                  )}
+                </motion.div>
+              );
+            })}
           </AnimatePresence>
           {loading && <TypingIndicator />}
           <div ref={bottom} />

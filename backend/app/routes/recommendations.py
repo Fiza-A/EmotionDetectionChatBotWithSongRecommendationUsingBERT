@@ -16,7 +16,7 @@ def recommendations(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    result = get_recommendations_for_user(db, current_user, emotion)
+    result = get_recommendations_for_user(db, current_user, emotion, enrich_itunes=True)
     return [recommendation_to_read(item) for item in result.items]
 
 

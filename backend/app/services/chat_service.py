@@ -57,7 +57,7 @@ def handle_chat_message(db: Session, user: User, text: str, conversation_id: int
     db.add(MoodHistory(user_id=user.id, conversation_id=conversation.id, emotion=prediction.emotion, confidence_score=prediction.confidence))
     db.flush()
 
-    recommendation_result = None if safety_triggered else get_recommendations_for_user(db, user, prediction.emotion)
+    recommendation_result = None if safety_triggered else get_recommendations_for_user(db, user, prediction.emotion, enrich_itunes=True)
     recommendation_payload = {"songs": [], "movies": [], "message": None} if safety_triggered else recommendation_result.to_payload()
     recommendation_items = [] if safety_triggered else recommendation_result.items
     if recommendation_items:

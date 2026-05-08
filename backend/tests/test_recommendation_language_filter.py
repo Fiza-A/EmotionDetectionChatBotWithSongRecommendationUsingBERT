@@ -23,7 +23,9 @@ def add_user(db, languages: str):
 
 
 def add_recommendation(db, title, kind, language, tags):
-    db.add(Recommendation(title=title, type=kind, language=language, mood_tags=tags, genre="Test"))
+    item = Recommendation(title=title, type=kind, language=language, mood_tags=tags, genre="Test")
+    db.add(item)
+    return item
 
 
 def seed_language_cases(db):
@@ -46,6 +48,8 @@ def test_hindi_only_happy_returns_only_hindi():
     result = get_recommendations_for_user(db, add_user(db, "Hindi"), "happy")
     assert result.items
     assert languages(result) == {"Hindi"}
+    assert all(item.type == "song" for item in result.songs)
+    assert all(item.type == "movie" for item in result.movies)
 
 
 def test_tamil_telugu_sad_returns_only_selected_languages():
@@ -54,6 +58,10 @@ def test_tamil_telugu_sad_returns_only_selected_languages():
     result = get_recommendations_for_user(db, add_user(db, "Tamil,Telugu"), "sad")
     assert result.items
     assert languages(result).issubset({"Tamil", "Telugu"})
+    assert result.songs
+    assert result.movies
+    blocked_tags = {"sad", "melancholic", "heartbreak", "grief", "depressing"}
+    assert all(blocked_tags.isdisjoint(set(item.mood_tags.split(","))) for item in result.songs)
 
 
 def test_malayalam_angry_returns_only_malayalam():
@@ -105,3 +113,60 @@ def test_recent_recommendations_are_avoided_when_alternatives_exist():
 
     assert returned_ids
     assert returned_ids.isdisjoint({item.id for item in first_three})
+
+
+def test_returns_up_to_three_songs_and_three_movies_when_available():
+    db = make_db()
+    user = add_user(db, "Hindi")
+    for index in range(5):
+        add_recommendation(db, f"Hindi Happy Song {index}", "song", "Hindi", "happy,upbeat")
+        add_recommendation(db, f"Hindi Happy Movie {index}", "movie", "Hindi", "happy,feel-good")
+    db.commit()
+
+    result = get_recommendations_for_user(db, user, "happy", limit_per_type=3)
+
+    assert len(result.songs) == 3
+    assert len(result.movies) == 3
+    assert {item.language for item in result.songs + result.movies} == {"Hindi"}
+
+
+def test_per_type_broadening_keeps_songs_when_movie_pool_matches_first():
+    db = make_db()
+    user = add_user(db, "Malayalam")
+    for index in range(4):
+        add_recommendation(db, f"Malayalam Exact Calm Movie {index}", "movie", "Malayalam", "calm")
+        add_recommendation(db, f"Malayalam Hopeful Song {index}", "song", "Malayalam", "hopeful,comforting")
+    db.commit()
+
+    result = get_recommendations_for_user(db, user, "angry", limit_per_type=3)
+
+    assert len(result.songs) == 3
+    assert len(result.movies) == 3
+    assert {item.language for item in result.items} == {"Malayalam"}
+
+
+def test_itunes_runtime_enrichment_adds_30_second_preview_to_songs(monkeypatch):
+    db = make_db()
+    user = add_user(db, "Hindi")
+    song = add_recommendation(db, "Hindi Preview Song", "song", "Hindi", "happy,upbeat")
+    add_recommendation(db, "Hindi Happy Movie", "movie", "Hindi", "happy,feel-good")
+    db.commit()
+
+    def fake_itunes_fields(title, artist):
+        assert title == "Hindi Preview Song"
+        return {
+            "preview_url": "https://audio-ssl.itunes.apple.com/example-preview.m4a",
+            "album_art": "https://is1-ssl.mzstatic.com/example-art.jpg",
+            "external_url": "https://music.apple.com/example-song",
+        }
+
+    monkeypatch.setattr("app.services.recommendation_service.itunes_fields_for", fake_itunes_fields)
+
+    result = get_recommendations_for_user(db, user, "happy", limit_per_type=3, enrich_itunes=True)
+
+    assert len(result.songs) == 1
+    assert result.songs[0].preview_url.endswith(".m4a")
+    assert result.songs[0].album_art
+    assert result.songs[0].external_url
+    db.refresh(song)
+    assert song.preview_url == result.songs[0].preview_url
